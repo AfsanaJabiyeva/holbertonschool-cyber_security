@@ -1,2 +1,2 @@
 #!/bin/bash
-ps aux | grep "^$root" | grep -vE " 0.0"
+ps aux | grep "^$1" | grep -vE " 0.0"
