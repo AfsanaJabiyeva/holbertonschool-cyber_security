@@ -1,3 +1,3 @@
 #!/bin/bash
-password=$(tr -dc [:alnum:] < /dev/urandom | head -c $1)
-echo "$password"
+echo $(tr -dc [:alnum:] < /dev/urandom | head -c $1)
+
