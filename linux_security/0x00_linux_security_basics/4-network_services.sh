@@ -1,2 +1,2 @@
 #!/bin/bash
-netstat -pnltui
+sudo netstat -pnltui
