@@ -1,2 +1,2 @@
 #!/bin/bash
-sudo firewalld-cmd --add-port=80/tcp
+sudo ufw allow 80
