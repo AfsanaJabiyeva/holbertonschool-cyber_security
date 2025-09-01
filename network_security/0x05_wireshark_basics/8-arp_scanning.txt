@@ -1,1 +1,1 @@
-arp.dst.proto_ipv4
+arp.dst.hw_mac
