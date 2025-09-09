@@ -1,2 +1,2 @@
 #!/bin/bash
-GET /ticket?id=5 HTTP/1.1
+GET /ticket?id=5 HTTP/1.1 Host:http://web0x00.hbtn/support
