@@ -1,0 +1,2 @@
+#!/bin/bash
+GET /ticket?id=5 HTTP/1.1
