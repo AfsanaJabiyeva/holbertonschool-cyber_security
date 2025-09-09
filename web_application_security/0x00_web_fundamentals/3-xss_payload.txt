@@ -1,0 +1,2 @@
+#!/bin/bash
+<script>#"><img src=/ onerror=alert(document.cookie)></script>
