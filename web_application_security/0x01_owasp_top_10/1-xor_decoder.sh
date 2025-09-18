@@ -14,19 +14,15 @@ if [[ "$input" != "$prefix"* ]]; then
 fi
 
 base64_str="${input:${#prefix}}"
-decoded=$(base64 -d <<< "$base64_str" 2>/dev/null)
 
-if [ $? -ne 0 ]; then
+# Check if base64 string is valid
+if ! echo -n "$base64_str" | base64 -d > /dev/null 2>&1; then
     echo "Error: Invalid base64 string" >&2
     exit 1
 fi
 
-output=""
-for (( i=0; i<${#decoded}; i++ )); do
-    char="${decoded:$i:1}"
-    byte_val=$(printf "%d" "'$char")
-    xor_val=$((byte_val ^ 0x5F))
-    output+=$(printf "\\$(printf "%03o" "$xor_val")")
+# Process each byte after base64 decoding
+echo -n "$base64_str" | base64 -d | od -t u1 -An -v | tr -s ' ' '\n' | grep -v '^$' | while read byte; do
+    xor_val=$((byte ^ 0x5F))
+    printf "\\$(printf "%03o" "$xor_val")"
 done
-
-echo -n "$output"
