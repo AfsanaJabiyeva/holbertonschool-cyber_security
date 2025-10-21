@@ -1,3 +1,3 @@
 #!/bin/bash
-if [ -z "$1" ]; then  echo "Usage: $0 <password>"  exit 1 fi
+[ -z "$1" ] && { echo "Usage: $0 <password>"; exit 1; }
 echo -n "$1" | sha1sum | awk '{print $1}' > 0_hash.txt
