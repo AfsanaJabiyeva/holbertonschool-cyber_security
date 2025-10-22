@@ -1,2 +1,2 @@
 #!/bin/bash
-chmod 774 "$1"
+find "$1"; chmod 774 "$1"
