@@ -1,2 +1,2 @@
 #!/bin/bash
-if ["$USER"="user2"]; then find "$1" -type f -exec chown user3 {};\; fi
+find "$1" -type f -user user2 -exec chown user3 {};\
