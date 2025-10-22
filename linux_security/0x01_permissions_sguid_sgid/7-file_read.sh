@@ -1,2 +1,2 @@
 #!/bin/bash
-find "$1" -type f; chmod 774 "$1"
+find "$1" -type f -exec chmod 774 {}\;
