@@ -1,2 +1,2 @@
 #!/bin/bash
-hping3 "$1"
+hping3 --flood "$1"
