@@ -1,118 +1,97 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 """
-read_write_heap.py - Find and replace an ASCII string in the heap of a process
+A script to find and replace a string in the heap memory of a running process.
 
 Usage:
-    read_write_heap.py <pid> <search_string> <replace_string>
+    ./read_write_heap.py pid search_string replace_string
 
-This script only searches and modifies memory inside the [heap] region.
-It requires root privileges or CAP_SYS_PTRACE (in lab containers you usually
-need to run:  echo 0 > /proc/sys/kernel/yama/ptrace_scope  first).
+Arguments:
+    pid: The process ID to inspect.
+    search_string: The string to search for in the heap.
+    replace_string: The string to replace it with.
 """
-import sys
+
 import os
+import sys
+import re
 
-
-def print_usage():
-    """Print usage information and exit with error code 1."""
-    print("Usage: read_write_heap.py pid search_string replace_string",
-          file=sys.stderr)
+def usage():
+    """Print usage message and exit with status code 1."""
+    print("Usage: ./read_write_heap.py pid search_string replace_string")
     sys.exit(1)
 
-
-def main():
-    """Main function - parse arguments and perform heap string replacement."""
-    if len(sys.argv) != 4:
-        print_usage()
-
+def read_write_heap(pid, search_string, replace_string):
+    """Find and replace a string in the heap of a process."""
     try:
-        pid = int(sys.argv[1])
+        # Validate PID
+        pid = int(pid)
     except ValueError:
-        print("Error: pid must be an integer", file=sys.stderr)
-        sys.exit(1)
+        print("Error: PID must be an integer.")
+        usage()
 
-    search_str = sys.argv[2]
-    replace_str = sys.argv[3]
+    # Paths to memory maps and memory
+    maps_path = f"/proc/{pid}/maps"
+    mem_path = f"/proc/{pid}/mem"
 
-    # Ensure strings are pure ASCII (task requirement)
     try:
-        search_bytes = search_str.encode('ascii')
-        replace_bytes = replace_str.encode('ascii')
-    except UnicodeEncodeError:
-        print("Error: strings must contain ASCII characters only", file=sys.stderr)
-        sys.exit(1)
-
-    if not search_bytes:
-        print("Error: search string cannot be empty", file=sys.stderr)
-        sys.exit(1)
-
-    # Do not allow replacement longer than original → prevents real overflow
-    if len(replace_bytes) > len(search_bytes):
-        print("Error: replacement string cannot be longer than search string",
-              file=sys.stderr)
-        sys.exit(1)
-
-    maps_path = "/proc/{}/maps".format(pid)
-    mem_path = "/proc/{}/mem".format(pid)
-
-    # Find heap boundaries
-    heap_start = heap_end = None
-    try:
-        with open(maps_path, "r") as maps:
-            for line in maps:
+        # Open the memory maps file
+        with open(maps_path, "r") as maps_file:
+            heap = None
+            for line in maps_file:
                 if "[heap]" in line:
-                    addr = line.split()[0]
-                    heap_start = int(addr.split("-")[0], 16)
-                    heap_end = int(addr.split("-")[1], 16)
-                    print("Found heap: {:#x}-{:#x}".format(heap_start, heap_end))
+                    heap = line
                     break
-        if heap_start is None:
-            print("Error: no heap found for PID {}".format(pid), file=sys.stderr)
-            sys.exit(1)
-    except (IOError, OSError):
-        print("Error: cannot read /proc/{}/maps (process gone or permission denied)"
-              .format(pid), file=sys.stderr)
+
+            if not heap:
+                print("Error: Could not find the heap segment.")
+                sys.exit(1)
+
+            # Extract start and end addresses of the heap
+            heap_start, heap_end = [int(x, 16) for x in heap.split()[0].split("-")]
+
+        # Open the memory file for reading and writing
+        with open(mem_path, "r+b") as mem_file:
+            # Seek to the start of the heap
+            mem_file.seek(heap_start)
+            # Read heap content
+            heap_data = mem_file.read(heap_end - heap_start)
+
+            # Search for the target string
+            search_bytes = search_string.encode()
+            replace_bytes = replace_string.encode()
+
+            if len(replace_bytes) > len(search_bytes):
+                print("Error: Replacement string must not be longer than the search string.")
+                sys.exit(1)
+
+            offset = heap_data.find(search_bytes)
+            if offset == -1:
+                print("Error: Search string not found in the heap.")
+                sys.exit(1)
+
+            # Replace the string
+            mem_file.seek(heap_start + offset)
+            mem_file.write(replace_bytes.ljust(len(search_bytes), b'\x00'))
+
+            print(f"Successfully replaced '{search_string}' with '{replace_string}' in the heap.")
+
+    except PermissionError:
+        print("Error: Permission denied. Try running as sudo.")
+        sys.exit(1)
+    except FileNotFoundError:
+        print("Error: Process not found. Is the PID correct?")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
         sys.exit(1)
 
-    # Open process memory for reading and writing
-    try:
-        mem = open(mem_path, "rb+")
-    except (IOError, OSError):
-        print("Error: cannot open /proc/{}/mem - try: echo 0 > /proc/sys/kernel/yama/ptrace_scope"
-              .format(pid), file=sys.stderr)
-        sys.exit(1)
-
-    found = False
-    with mem:
-        # Read entire heap at once (heap is usually small)
-        mem.seek(heap_start)
-        heap_data = mem.read(heap_end - heap_start)
-
-        pos = 0
-        while True:
-            idx = heap_data.find(search_bytes, pos)
-            if idx == -1:
-                break
-
-            address = heap_start + idx
-            print("Found \"{}\" at {:#x}".format(search_str, address))
-
-            # Build replacement with proper null termination and padding
-            padding = b"\x00" * (len(search_bytes) - len(replace_bytes))
-            new_data = replace_bytes + padding
-
-            mem.seek(address)
-            mem.write(new_data)
-            print("  → replaced with \"{}\"".format(replace_str))
-
-            found = True
-            pos = idx + 1   # continue searching (allows overlapping matches)
-
-    if not found:
-        print("String \"{}\" not found in heap".format(search_str))
-    else:
-        print("Success! Check the target process output.")
-
-
+# Main logic
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 4:
+        usage()
+
+    pid = sys.argv[1]
+    search_string = sys.argv[2]
+    replace_string = sys.argv[3]
+
+    read_write_heap(pid, search_string, replace_string)
