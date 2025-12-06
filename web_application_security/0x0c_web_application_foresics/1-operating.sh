@@ -1,2 +1,2 @@
 #!/bin/bash
-grep -E "Ubuntu" dmseg
+grep -E "4.2.4-1ubuntu3" dmseg
